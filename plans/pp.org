@@ -1,0 +1,7 @@
+* Change map file
+* Remove courses
+** Remove controls
+* Remove bends
+** Selectvely
+* Merge courses and controls from 2 files
+* Merge part courses into courses 
