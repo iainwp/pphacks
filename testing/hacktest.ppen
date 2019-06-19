@@ -1,0 +1,75 @@
+﻿<course-scribe-event>
+  <event id="1">
+    <title>hacktest</title>
+    <map kind="OCAD" scale="4000" ignore-missing-fonts="false" absolute-path="C:\Users\iain\Dropbox\o\ppen-hacks\university-geo-2019-02-NOTEMPS.omap">university-geo-2019-02-NOTEMPS.omap</map>
+    <standards map="2000" description="2018" />
+    <all-controls print-scale="4000" description-kind="symbols" />
+    <print-area automatic="true" restrict-to-page-size="true" left="-290.435242" top="27.0003662" right="6.490753" bottom="-183.057648" page-width="827" page-height="1169" page-margins="0" page-landscape="true" />
+    <numbering start="31" disallow-invertible="false" />
+    <punch-card rows="3" columns="8" left-to-right="true" top-to-bottom="false" />
+    <course-appearance scale-sizes="None" auto-leg-gap-size="3.5" blend-purple="true" />
+    <descriptions lang="en" color="black" />
+    <ocad overprint-colors="false" />
+  </event>
+  <control id="1" kind="start">
+    <location x="-202.064865" y="-110.146248" />
+  </control>
+  <control id="2" kind="normal">
+    <code>31</code>
+    <location x="-180.6196" y="-84.75943" />
+  </control>
+  <control id="3" kind="normal">
+    <code>32</code>
+    <location x="-137.1846" y="-114.591148" />
+  </control>
+  <control id="4" kind="normal">
+    <code>33</code>
+    <location x="-140.76442" y="-69.00828" />
+  </control>
+  <control id="5" kind="normal">
+    <code>34</code>
+    <location x="-112.841919" y="-81.17962" />
+  </control>
+  <control id="6" kind="normal">
+    <code>35</code>
+    <location x="-114.989807" y="-43.71097" />
+  </control>
+  <control id="7" kind="finish">
+    <location x="-81.33963" y="-54.4503937" />
+    <description box="all" iof-2004-ref="14.3" />
+  </control>
+  <course id="1" kind="normal" order="1">
+    <name>bendy</name>
+    <labels label-kind="sequence" />
+    <first course-control="1" />
+    <print-area automatic="true" restrict-to-page-size="true" left="-290.435242" top="18.5130615" right="6.490753" bottom="-191.544952" page-width="827" page-height="1169" page-margins="0" page-landscape="true" />
+    <options print-scale="4000" description-kind="symbols" />
+  </course>
+  <course-control id="1" control="1">
+    <next course-control="3" />
+  </course-control>
+  <course-control id="2" control="7" />
+  <course-control id="3" control="2">
+    <next course-control="4" />
+  </course-control>
+  <course-control id="4" control="3">
+    <next course-control="5" />
+  </course-control>
+  <course-control id="5" control="4">
+    <next course-control="6" />
+  </course-control>
+  <course-control id="6" control="5">
+    <next course-control="2" />
+  </course-control>
+  <leg id="1" start-control="2" end-control="3">
+    <bends>
+      <location x="-169.909973" y="-114.872635" />
+    </bends>
+  </leg>
+  <leg id="2" start-control="3" end-control="4">
+    <bends>
+      <location x="-142.583466" y="-94.22859" />
+      <location x="-125.99662" y="-89.3360748" />
+    </bends>
+  </leg>
+</course-scribe-event>
