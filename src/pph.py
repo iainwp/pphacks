@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, os
+import sys, os, argparse
 from lxml import etree
 from lxml import objectify
 from copy import deepcopy
@@ -62,14 +62,12 @@ class PPenFile:
 
   def cppa(self, fc, tcs):
     fcid = self.courses[fc]
-    pa = self.doctree.xpath(".//course[@id='%d']"%fcid)[0].find('print-area').attrib
-    print(pa)
+    pa = self.doctree.xpath(".//course[@id='%d']"
+                            % fcid)[0].find('print-area').attrib
     for x in tcs:
       p = self.doctree.xpath(".//course[@id='%d']" % self.courses[x])[0]
       for a, v in pa.items():
         p.find('print-area').set(a, v)
-    
-
 
 #def rmbends():
 #  fn = sys.argv[1]
@@ -103,27 +101,75 @@ def listcourses(arg):
   print(pp.list_courses())
 
 
-def cppa(arg):
-  fn = arg[1]
-  outf = arg[2]
-  basepacourse = arg[3]
+def copyprintarea(s):
+  fn = s.infile[0]
+  outf = s.outfile[0]
+  if outf == None:
+    outf = outf[:-5]+"-out.ppen"
+  basepacourse = s.fromcourse[0]
+  copytocourses = s.tocourses[0].split(',')
   pp = PPenFile(fn)
-  x = list(pp.list_courses().keys())
-  x.remove(basepacourse)
-  pp.cppa(basepacourse, x)
+  pp.cppa(basepacourse, copytocourses)
   pp.write(outf)
   
+def rmbends(s):
+  print(s.infile)
+  print(s.outfile)
+  print(s.exclude_legs)
+  print("not implemented yet")
   
+def rmcourses(s):
+  print(s.infile)
+  print(s.outfile)
+  print(s.courses)
   
-def main():
-  if sys.argv[1] == "chmap":
-    chmap(sys.argv[1:])
-  elif sys.argv[1] == "leavecourses":
-    leavecourses(sys.argv[1:])
-  elif sys.argv[1] == "listcourses":
-    listcourses(sys.argv[1:])
-  elif sys.argv[1] == "cppa":
-    cppa(sys.argv[1:])
-  else:
-    print("What?")
+def leavecourses(s):
+  print(s.infile)
+  print(s.outfile)
+  print(s.courses)
+  
+
+def chmap(s):
+  print(s.infile)
+  print(s.outfile)
+  print(s.newmap)
+
+
+def main():  
+  parser = argparse.ArgumentParser(description='PurplePen hacks.')
+  subparsers = parser.add_subparsers(help='sub-command help')
+
+  parser_a = subparsers.add_parser('rmbends', help='remove bends')
+  parser_a.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_a.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
+  parser_a.add_argument('--exclude-legs', metavar='A-B,C-D', nargs=1, help='legs not to remove bends from')
+  parser_a.set_defaults(func=rmbends)
+
+  parser_b = subparsers.add_parser('rmcourses', help='Remove courses')
+  parser_b.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_b.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
+  parser_b.add_argument('--courses', type=str, metavar='C1,C2,...', nargs=1, help='Output file')
+  parser_b.set_defaults(func=rmcourses)
+
+  parser_c = subparsers.add_parser('leavecourses', help='Leave courses remove others')
+  parser_c.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_c.add_argument('--outfile', metavar='OUT', type=str, nargs=1, help='Output file')
+  parser_c.set_defaults(func=leavecourses)
+
+  parser_d = subparsers.add_parser('copyprintarea', help='Copy print area')
+  parser_d.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_d.add_argument('--outfile', type=str, nargs=1, metavar='OUT', help='Output file')
+  parser_d.add_argument('--fromcourse', type=str, nargs=1, required=True, metavar='C', help='Course to copy from')
+  parser_d.add_argument('--tocourses', type=str, nargs=1, default="All", metavar='C1,C2,...', help='Course(s) to copy to')
+  parser_d.set_defaults(func=copyprintarea)
+
+  parser_e = subparsers.add_parser('chmap', help='Change map')
+  parser_e.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_e.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
+  parser_e.add_argument('--newmap', metavar='MAPFILE', type=str, nargs=1, help='New map file')
+  parser_e.set_defaults(func=chmap)
+
+  args = parser.parse_args()
+  args.func(args)
+
 main()
