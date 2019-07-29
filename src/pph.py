@@ -61,6 +61,7 @@ class PPenFile:
     self.doctree.find('event/map').set('absolute-path', absmap)
 
   def cppa(self, fc, tcs):
+    print(fc,tcs)
     fcid = self.courses[fc]
     pa = self.doctree.xpath(".//course[@id='%d']"
                             % fcid)[0].find('print-area').attrib
@@ -69,25 +70,44 @@ class PPenFile:
       for a, v in pa.items():
         p.find('print-area').set(a, v)
 
-#def rmbends():
-#  fn = sys.argv[1]
-#  pp = PPenFile(fn)
-#  pp.remove_bends()
-#  pp.write('new.ppen')
-  
-def chmap(arg):
+def listcourses(arg):
   fn = arg[1]
-  newmapf = arg[2]
-  outputppen = arg[3]
   pp = PPenFile(fn)
-  x, y = pp.getmapfile()
-  pp.setmapfile(newmapf, y[:-len(x)]+newmapf)
-  pp.write(outputppen)
+  print(pp.list_courses())
 
-def leavecourses(arg):
-  fn = arg[1]
-  outf = arg[2]
-  courses = arg[3].split(',')
+def copyprintarea(s):
+  fn = s.infile[0]
+  pp = PPenFile(fn)
+  if not s.outfile:
+    outf = outf[:-5]+"-out.ppen"
+  else:
+    outf = s.outfile[0]
+  basepacourse = s.fromcourse[0]
+  if not s.tocourses:
+    cs = list(pp.list_courses().keys())
+  else:
+    cs = s.tocourses[0].split(',')
+  print(basepacourse, cs)
+  pp.cppa(basepacourse, cs)
+  pp.write(outf)
+  
+def rmbends(s):
+  print("not implemented yet")
+  
+def rmcourses(s):
+  fn = s.infile[0]
+  outf = s.outfile[0]
+  courses = s.courses[0].split(',')
+  
+  pp = PPenFile(fn)
+  for x in courses:
+    pp.remove_course(x)
+  pp.write(outf)
+  
+def leavecourses(s):
+  fn = s.infile[0]
+  outf = s.outfile[0]
+  courses = s.courses[0].split(',')
   
   pp = PPenFile(fn)
   for x in pp.list_courses():
@@ -95,72 +115,53 @@ def leavecourses(arg):
       pp.remove_course(x)
   pp.write(outf)
 
-def listcourses(arg):
-  fn = arg[1]
-  pp = PPenFile(fn)
-  print(pp.list_courses())
 
-
-def copyprintarea(s):
-  fn = s.infile[0]
-  outf = s.outfile[0]
-  if outf == None:
-    outf = outf[:-5]+"-out.ppen"
-  basepacourse = s.fromcourse[0]
-  copytocourses = s.tocourses[0].split(',')
-  pp = PPenFile(fn)
-  pp.cppa(basepacourse, copytocourses)
-  pp.write(outf)
+def listcourses(s):
+  pp = PPenFile(s.infile[0])
+  c = pp.list_courses()
+  print(" ".join(c.keys()))
   
-def rmbends(s):
-  print(s.infile)
-  print(s.outfile)
-  print(s.exclude_legs)
-  print("not implemented yet")
-  
-def rmcourses(s):
-  print(s.infile)
-  print(s.outfile)
-  print(s.courses)
-  
-def leavecourses(s):
-  print(s.infile)
-  print(s.outfile)
-  print(s.courses)
-  
-
 def chmap(s):
-  print(s.infile)
-  print(s.outfile)
-  print(s.newmap)
-
+  outputppen = s.outfile
+  newmapf = s.newmap
+  pp = PPenFile(s.infile)
+  x, y = pp.getmapfile()
+  pp.setmapfile(newmapf, y[:-len(x)]+newmapf)
+  pp.write(outputppen)
 
 def main():  
   parser = argparse.ArgumentParser(description='PurplePen hacks.')
   subparsers = parser.add_subparsers(help='sub-command help')
 
   parser_a = subparsers.add_parser('rmbends', help='remove bends')
-  parser_a.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
-  parser_a.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
-  parser_a.add_argument('--exclude-legs', metavar='A-B,C-D', nargs=1, help='legs not to remove bends from')
+  parser_a.add_argument('infile', metavar='IN', type=str, nargs=1,
+                        help='Input ppen file')
+  parser_a.add_argument('--outfile', type=str, metavar='OUT', nargs=1,
+                        help='Output file')
+  parser_a.add_argument('--exclude-legs', metavar='A-B,C-D', nargs=1,
+                        help='legs not to remove bends from')
   parser_a.set_defaults(func=rmbends)
 
   parser_b = subparsers.add_parser('rmcourses', help='Remove courses')
-  parser_b.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
-  parser_b.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
-  parser_b.add_argument('--courses', type=str, metavar='C1,C2,...', nargs=1, help='Output file')
+  parser_b.add_argument('infile', metavar='IN', type=str, nargs=1,
+                        help='Input ppen file')
+  parser_b.add_argument('--outfile', type=str, metavar='OUT', nargs=1,
+                        help='Output file')
+  parser_b.add_argument('--courses', type=str, metavar='C1,C2,...',
+                        nargs=1, help='Courses to remove')
   parser_b.set_defaults(func=rmcourses)
 
   parser_c = subparsers.add_parser('leavecourses', help='Leave courses remove others')
   parser_c.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
   parser_c.add_argument('--outfile', metavar='OUT', type=str, nargs=1, help='Output file')
+  parser_c.add_argument('--courses', type=str, metavar='C1,C2,...', nargs=1, help='Courses to leave')
   parser_c.set_defaults(func=leavecourses)
 
   parser_d = subparsers.add_parser('copyprintarea', help='Copy print area')
   parser_d.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
   parser_d.add_argument('--outfile', type=str, nargs=1, metavar='OUT', help='Output file')
   parser_d.add_argument('--fromcourse', type=str, nargs=1, required=True, metavar='C', help='Course to copy from')
-  parser_d.add_argument('--tocourses', type=str, nargs=1, default="All", metavar='C1,C2,...', help='Course(s) to copy to')
+  parser_d.add_argument('--tocourses', type=str, nargs=1, metavar='C1,C2,...', help='Course(s) to copy to')
   parser_d.set_defaults(func=copyprintarea)
 
   parser_e = subparsers.add_parser('chmap', help='Change map')
@@ -168,6 +169,10 @@ def main():
   parser_e.add_argument('--outfile', type=str, metavar='OUT', nargs=1, help='Output file')
   parser_e.add_argument('--newmap', metavar='MAPFILE', type=str, nargs=1, help='New map file')
   parser_e.set_defaults(func=chmap)
+
+  parser_f = subparsers.add_parser('listcourses', help='List courses in a ppen file')
+  parser_f.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_f.set_defaults(func=listcourses)
 
   args = parser.parse_args()
   args.func(args)
