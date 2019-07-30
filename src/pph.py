@@ -21,22 +21,17 @@ class PPenFile:
         continue
       self.courses[x.find("name").text] = int(x.get("id"))
         
-  def remove_bends(self, ex=[]):
+  def remove_bends(self, ks=[]):
     # print(ex)
     for l in self.doctree.iter("leg"):
-      o = l.get('start-control')
-      t = l.get('end-control')
-      if o not in self.controls:
-        continue
-      if t not in self.controls:
-        continue
-      o = self.controls[int(l.get('start-control'))]
-      t = self.controls[int(l.get('end-control'))]
-      print(o,t)
-      f, b = (o, t), (t, o)
-      if not (f in ex or b in ex):
-        #print('deleting ', f, b)
-        del(l.bends)
+      o, t = int(l.get('start-control')), int(l.get('end-control'))
+      if o not in self.controls: continue
+      if t not in self.controls: continue
+      a, b = self.controls[o], self.controls[t]
+      if not ((a,b) in ks or (b,a) in ks):
+        xps=".//leg[@start-control='%d' and @end-control='%d']"%(o,t)
+        leg=self.doctree.xpath(xps)[0]
+        leg.remove(leg[0])
 
   def write(self, fname):
     self.doctree.write(fname, pretty_print=True)
@@ -92,13 +87,19 @@ def copyprintarea(s):
   pp.write(outf)
   
 def rmbends(s):
-  print("not implemented yet")
+  fn = s.infile[0]
+  outf = s.outfile[0]
+  keeps = []
+  if s.keep:
+    keeps = [tuple(map(int,x.split('-'))) for x in s.keep[0].split(',')]
+  pp = PPenFile(fn)
+  pp.remove_bends(keeps)
+  pp.write(outf)
   
 def rmcourses(s):
   fn = s.infile[0]
   outf = s.outfile[0]
   courses = s.courses[0].split(',')
-  
   pp = PPenFile(fn)
   for x in courses:
     pp.remove_course(x)
@@ -137,8 +138,8 @@ def main():
   parser_a.add_argument('infile', metavar='IN', type=str, nargs=1,
                         help='Input ppen file')
   parser_a.add_argument('--outfile', type=str, metavar='OUT', nargs=1,
-                        help='Output file')
-  parser_a.add_argument('--exclude-legs', metavar='A-B,C-D', nargs=1,
+                        required=True, help='Output file')
+  parser_a.add_argument('--keep', metavar='A-B,C-D', nargs=1,
                         help='legs not to remove bends from')
   parser_a.set_defaults(func=rmbends)
 
