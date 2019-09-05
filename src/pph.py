@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, os, argparse, json, base64
+import sys, os, argparse, base64, json
 from lxml import etree
 from lxml import objectify
 from copy import deepcopy
@@ -9,19 +9,39 @@ class PPenFile:
   def __init__(self, filename):
     self.doctree = etree.parse(filename)
 
-    self.controls = {}
-    self.codetoid = {}
+    self.controls, self.codetoid = {}, {}
+    starts, finishes = 0, 0
     for x in self.doctree.iter("control"):
       cid = int(x.get("id"))
-      if x.get("kind") == "normal":
+      ckind = x.get("kind")
+      if ckind == "start":
+        self.controls[cid] = "start%d"%starts
+        starts += 1
+        self.codetoid[self.controls[cid]]=cid
+      elif ckind == "finish":
+        self.controls[cid] = "finish%d"%finishes
+        finishes += 1
+        self.codetoid[self.controls[cid]]=cid
+      elif ckind == "normal":
         self.controls[cid] = int(x.find('code').text)
-        self.codetoid[self.controls[cid]] = cid
+        self.codetoid[self.controls[cid]]=cid
+      elif ckind == "crossing-point":
+        pass
 
+    lid=0
+    for x in self.doctree.iter("leg"):
+      lid = max(int(x.get("id")), lid)
+
+    self.lid = lid
+    
     self.courses = {}
     for x in self.doctree.iter("course"):
       if "id" not in x.keys():
         continue
       self.courses[x.find("name").text] = int(x.get("id"))
+
+  def getIds(self):
+    return self.controls
         
   def remove_bends(self, ks=[]):
     # print(ex)
@@ -32,8 +52,12 @@ class PPenFile:
       a, b = self.controls[o], self.controls[t]
       if not ((a,b) in ks or (b,a) in ks):
         xps=".//leg[@start-control='%d' and @end-control='%d']//bends"%(o,t)
-        leg=self.doctree.xpath(xps)
-        leg.getparent().remove(leg)
+        #print(xps)
+        bs=self.doctree.xpath(xps)
+        if bs == []: continue
+        #print (bs[0], bs[0].getparent())
+        p = bs[0].getparent()
+        p.remove(bs[0])
 
   def getbends(self):
     bends = []
@@ -42,20 +66,50 @@ class PPenFile:
       if o not in self.controls: continue
       if t not in self.controls: continue
       a, b = self.controls[o], self.controls[t]
-      xps=".//leg[@start-control='%d' and @end-control='%d']//bends"%(o,t)
-      encoded = (etree.tostring(self.doctree.xpath(xps)[0]))
-      print(type(encoded), encoded)
-      bends.append((a, b, encoded))
+      xps=".//leg[@start-control='%d' and @end-control='%d']//bends//location"%(o,t)
+      ls=self.doctree.xpath(xps)
+      #print(self.controls[int(ls[0].getparent().getparent().get('start-control'))])
+      lss=[(a,b)]
+      for l in ls:
+        lss.append((float(l.get('x')), float(l.get('y'))))
+      bends.append(lss)
+      #print(bends)
     return bends
 
   def setbends(self, bs):
-    for f, t, b in bs:
+    #print(bs)
+    for b in bs:
+      (f,t) = b[0]
+      if f not in self.codetoid: continue
+      if t not in self.codetoid: continue
+      
       idf, idt = self.codetoid[f], self.codetoid[t]
-      xps=".//leg[@start-control='%d' and @end-control='%d']"%(idf, idt)
-      l=self.doctree.xpath(xps)
-      d=b.decode('ascii')
-      be=etree.fromstring(str(b))
 
+      xps=".//leg[@start-control='%d' and @end-control='%d']" % (idf, idt)
+      l=self.doctree.xpath(xps)
+      bsx = etree.Element("bends")
+      for leg in b[1:]:
+        bsx.append(etree.Element("location",
+                                 x=str(leg[0]),
+                                 y=str(leg[1])))
+      if l == []:
+        #print("can't find leg", f,"to" ,t, "id ", idf, idt)
+        #print("inserting")
+        lcc = self.doctree.xpath(".//leg")
+        if lcc == []:
+          lcc = self.doctree.xpath(".//course-control")
+        lcc = lcc[-1]
+        self.lid += 1
+        newleg = etree.Element("leg")
+        newleg.attrib['start-control'] = str(idf)
+        newleg.attrib['end-control'] = str(idt)
+        newleg.attrib['id'] = str(self.lid)
+        newleg.append(bsx)
+        p = lcc.getparent()
+        p.insert(p.index(lcc)+1, newleg)
+      else:
+        l[0].append(bsx)
+      
   def write(self, fname):
     self.doctree.write(fname, pretty_print=True)
 
@@ -79,7 +133,7 @@ class PPenFile:
     self.doctree.find('event/map').set('absolute-path', absmap)
 
   def cppa(self, fc, tcs):
-    print(fc,tcs)
+    print("cppa",fc,tcs)
     fcid = self.courses[fc]
     pa = self.doctree.xpath(".//course[@id='%d']"
                             % fcid)[0].find('print-area').attrib
@@ -122,7 +176,7 @@ def rmbends(s):
   if s.keep:
     keeps = [tuple(map(intorminus1,x.split('-'))) for x in s.keep[0].split(',')]
   pp = PPenFile(fn)
-  print(keeps)
+  #print("keeping ", keeps)
   pp.remove_bends(keeps)
   pp.write(outf)
 
@@ -153,8 +207,11 @@ def rmcourses(s):
 def leavecourses(s):
   fn, outf, courses = s.infile[0], s.outfile[0], s.courses[0].split(',')
   pp = PPenFile(fn)
+  print("leavving", courses)
+  print("from", pp.list_courses())
   for x in pp.list_courses():
     if x not in courses:
+      print("removing",x)
       pp.remove_course(x)
   pp.write(outf)
 
@@ -164,12 +221,16 @@ def listcourses(s):
   print(" ".join(c.keys()))
   
 def chmap(s):
-  outputppen = s.outfile
-  newmapf = s.newmap
-  pp = PPenFile(s.infile)
+  outputppen = s.outfile[0]
+  newmapf = s.newmap[0]
+  pp = PPenFile(s.infile[0])
   x, y = pp.getmapfile()
   pp.setmapfile(newmapf, y[:-len(x)]+newmapf)
   pp.write(outputppen)
+
+def getids(s):
+  pp = PPenFile(s.infile[0])
+  json.dump(pp.getIds(), sys.stdout)
 
 def main():  
   parser = argparse.ArgumentParser(description='PurplePen hacks.')
@@ -222,6 +283,12 @@ def main():
   parser_f = subparsers.add_parser('listcourses', help='List courses in a ppen file')
   parser_f.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
   parser_f.set_defaults(func=listcourses)
+
+  parser_g = subparsers.add_parser('getids', help='Extract id information from ppen file')
+  parser_g.add_argument('infile', metavar='IN', type=str, nargs=1, help='Input ppen file')
+  parser_g.set_defaults(func=getids)
+
+  
 
   args = parser.parse_args()
   args.func(args)
