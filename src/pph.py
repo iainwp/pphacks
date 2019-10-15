@@ -211,14 +211,14 @@ def leavecourses(s):
   print("from", pp.list_courses())
   for x in pp.list_courses():
     if x not in courses:
-      print("removing",x)
+    # print("removing",x)
       pp.remove_course(x)
   pp.write(outf)
 
 def listcourses(s):
   pp = PPenFile(s.infile[0])
   c = pp.list_courses()
-  print(" ".join(c.keys()))
+  # print(" ".join(c.keys()))
   
 def chmap(s):
   outputppen = s.outfile[0]
